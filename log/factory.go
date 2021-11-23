@@ -9,23 +9,29 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Factory struct {
-	logger *zap.Logger
+type Factory interface {
+	Bg() Logger
+	For(ctx context.Context) Logger
+	With(fields ...zapcore.Field) Factory
 }
 
 func NewFactory(logger *zap.Logger) Factory {
-	return Factory{logger: logger}
+	return factory{logger: logger}
+}
+
+type factory struct {
+	logger *zap.Logger
 }
 
 // Bg creates a context-unaware logger.
-func (b Factory) Bg() Logger {
+func (b factory) Bg() Logger {
 	return logger(b)
 }
 
 // For returns a context-aware Logger. If the context
 // contains an OpenTracing span, all logging calls are also
 // echo-ed into the span.
-func (b Factory) For(ctx context.Context) Logger {
+func (b factory) For(ctx context.Context) Logger {
 	if span := opentracing.SpanFromContext(ctx); span != nil {
 		logger := spanLogger{span: span, logger: b.logger}
 
@@ -42,6 +48,6 @@ func (b Factory) For(ctx context.Context) Logger {
 }
 
 // With creates a child logger, and optionally adds some context fields to that logger.
-func (b Factory) With(fields ...zapcore.Field) Factory {
-	return Factory{logger: b.logger.With(fields...)}
+func (b factory) With(fields ...zapcore.Field) Factory {
+	return factory{logger: b.logger.With(fields...)}
 }
