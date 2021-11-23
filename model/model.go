@@ -1,4 +1,4 @@
-package baas
+package model
 
 import (
 	"database/sql"
