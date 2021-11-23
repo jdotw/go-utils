@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/12kmps/baas/log"
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go/config"
 	"github.com/uber/jaeger-client-go/rpcmetrics"
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
-
-	"github.com/12kmps/baas/log"
 )
 
 func Init(serviceName string, metricsFactory metrics.Factory, logger log.Factory) opentracing.Tracer {
