@@ -13,6 +13,8 @@ import (
 )
 
 func Init(serviceName string, metricsFactory metrics.Factory, logger log.Factory) opentracing.Tracer {
+	logger.Bg().Info("TEST LOCAL")
+
 	cfg := &config.Configuration{
 		Sampler: &config.SamplerConfig{},
 	}

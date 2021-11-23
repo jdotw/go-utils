@@ -11,6 +11,7 @@ import (
 )
 
 func Init(service string) (Factory, metrics.Factory) {
+
 	rand.Seed(int64(time.Now().Nanosecond()))
 	rootLogger, _ := zap.NewDevelopment(
 		zap.AddStacktrace(zapcore.FatalLevel),
