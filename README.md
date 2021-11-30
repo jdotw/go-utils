@@ -31,3 +31,12 @@ microservices.
   Transactions, Product and Payments. Back-end is built for modular service
   domains following the BIAN 9.1 reference arch.
 - Complexity in the back-end service domain interactions is handled in the client SDK libraries, not via additional tiers of services.
+
+# Implementation
+
+## Services and Ports
+
+8081 - CustomerReferenceDataManagement HTTP
+8082 - CustomerReferenceDataManagement gRPC
+8083 - CurrentAccount HTTP
+8084 - CurrentAccount gRPC
