@@ -1,6 +1,7 @@
 package tracing
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,8 +14,6 @@ import (
 )
 
 func Init(serviceName string, metricsFactory metrics.Factory, logger log.Factory) opentracing.Tracer {
-	logger.Bg().Info("TEST LOCAL")
-
 	cfg := &config.Configuration{
 		Sampler: &config.SamplerConfig{},
 	}
@@ -52,4 +51,18 @@ func (l jaegerLoggerAdapter) Error(msg string) {
 
 func (l jaegerLoggerAdapter) Infof(msg string, args ...interface{}) {
 	l.logger.Info(fmt.Sprintf(msg, args...))
+}
+
+func NewChildSpanAndContext(ctx context.Context, tracer opentracing.Tracer, name string) (context.Context, opentracing.Span) {
+	var span opentracing.Span
+	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
+		span = tracer.StartSpan(
+			name,
+			opentracing.ChildOf(parentSpan.Context()),
+		)
+	} else {
+		span = tracer.StartSpan(name)
+	}
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	return ctx, span
 }
