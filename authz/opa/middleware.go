@@ -2,9 +2,11 @@ package opa
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/12kmps/baas/log"
+	"github.com/12kmps/baas/opa"
 	"github.com/12kmps/baas/tracing"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/open-policy-agent/opa/rego"
@@ -32,7 +34,7 @@ func NewAuthorizor(logger log.Factory, tracer opentracing.Tracer) Authorizor {
 	}
 }
 
-func (a *Authorizor) NewMiddleware(policy string, queryString string) endpoint.Middleware {
+func (a *Authorizor) NewInProcessMiddleware(policy string, queryString string) endpoint.Middleware {
 	query, err := rego.New(
 		rego.Query(queryString),
 		rego.Module("policy.rego", policy),
@@ -43,7 +45,7 @@ func (a *Authorizor) NewMiddleware(policy string, queryString string) endpoint.M
 
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			ctx, span := tracing.NewChildSpanAndContext(ctx, a.tracer, "AuthZPolicy")
+			ctx, span := tracing.NewChildSpanAndContext(ctx, a.tracer, "AuthZPolicyInternal")
 
 			results, err := query.Eval(ctx, rego.EvalInput(request))
 			if err != nil {
@@ -57,6 +59,42 @@ func (a *Authorizor) NewMiddleware(policy string, queryString string) endpoint.M
 			}
 
 			ctx = context.WithValue(ctx, AuthorizationResultsContextKey, results)
+			span.Finish()
+
+			return next(ctx, request)
+		}
+	}
+}
+
+type AuthorizationResponse struct {
+	Result bool `json:"result,omitempty"`
+}
+
+func (a *Authorizor) NewSidecarMiddleware(queryString string) endpoint.Middleware {
+	c := opa.NewOPAClient(a.logger, a.tracer, "http://localhost:8181")
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			ctx, span := tracing.NewChildSpanAndContext(ctx, a.tracer, "AuthZPolicyExternal")
+
+			b, err := json.Marshal(request)
+			if err != nil {
+				// handle error
+				return nil, err
+			}
+
+			var resp AuthorizationResponse
+			err = c.Query(ctx, queryString, b, &resp)
+			if err != nil {
+				// handle error
+				return nil, err
+			}
+
+			if !resp.Result {
+				a.logger.For(ctx).Info("Denied by policy", zap.String("query", queryString))
+				return nil, errors.New("Denied by policy")
+			}
+
+			ctx = context.WithValue(ctx, AuthorizationResultsContextKey, resp)
 			span.Finish()
 
 			return next(ctx, request)
