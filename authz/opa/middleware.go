@@ -2,9 +2,9 @@ package opa
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 
+	"github.com/12kmps/baas/authn/jwt"
+	"github.com/12kmps/baas/authzerrors"
 	"github.com/12kmps/baas/log"
 	"github.com/12kmps/baas/opa"
 	"github.com/12kmps/baas/tracing"
@@ -34,6 +34,18 @@ func NewAuthorizor(logger log.Factory, tracer opentracing.Tracer) Authorizor {
 	}
 }
 
+type queryInput struct {
+	Request interface{} `json:"request,omitempty"`
+	Claims  interface{} `json:"claims,omitempty"`
+}
+
+func inputForRequest(ctx context.Context, request interface{}) queryInput {
+	return queryInput{
+		Request: request,
+		Claims:  ctx.Value(jwt.JWTClaimsContextKey),
+	}
+}
+
 func (a *Authorizor) NewInProcessMiddleware(policy string, queryString string) endpoint.Middleware {
 	query, err := rego.New(
 		rego.Query(queryString),
@@ -47,7 +59,7 @@ func (a *Authorizor) NewInProcessMiddleware(policy string, queryString string) e
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			ctx, span := tracing.NewChildSpanAndContext(ctx, a.tracer, "AuthZPolicyInternal")
 
-			results, err := query.Eval(ctx, rego.EvalInput(request))
+			results, err := query.Eval(ctx, rego.EvalInput(inputForRequest(ctx, request)))
 			if err != nil {
 				// handle error
 				return nil, err
@@ -55,7 +67,7 @@ func (a *Authorizor) NewInProcessMiddleware(policy string, queryString string) e
 
 			if !results.Allowed() {
 				a.logger.For(ctx).Info("Denied by policy", zap.String("query", queryString))
-				return nil, errors.New("Denied by policy")
+				return nil, authzerrors.ErrDeniedByPolicy
 			}
 
 			ctx = context.WithValue(ctx, AuthorizationResultsContextKey, results)
@@ -76,14 +88,8 @@ func (a *Authorizor) NewSidecarMiddleware(queryString string) endpoint.Middlewar
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			ctx, span := tracing.NewChildSpanAndContext(ctx, a.tracer, "AuthZPolicyExternal")
 
-			b, err := json.Marshal(request)
-			if err != nil {
-				// handle error
-				return nil, err
-			}
-
 			var resp AuthorizationResponse
-			err = c.Query(ctx, queryString, b, &resp)
+			err = c.Query(ctx, queryString, inputForRequest(ctx, request), &resp)
 			if err != nil {
 				// handle error
 				return nil, err
@@ -91,7 +97,7 @@ func (a *Authorizor) NewSidecarMiddleware(queryString string) endpoint.Middlewar
 
 			if !resp.Result {
 				a.logger.For(ctx).Info("Denied by policy", zap.String("query", queryString))
-				return nil, errors.New("Denied by policy")
+				return nil, authzerrors.ErrDeniedByPolicy
 			}
 
 			ctx = context.WithValue(ctx, AuthorizationResultsContextKey, resp)

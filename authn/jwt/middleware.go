@@ -26,7 +26,8 @@ const (
 
 	// JWTClaimsContextKey holds the key used to store the JWT Claims in the
 	// context.
-	JWTClaimsContextKey contextKey = "JWTClaims"
+	JWTClaimsContextKey       contextKey = "JWTClaims"
+	JWTDecodedTokenContextKey contextKey = "JWTDecodedToken"
 )
 
 var (
@@ -201,6 +202,7 @@ func newParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims ClaimsFa
 				return nil, ErrTokenInvalid
 			}
 
+			ctx = context.WithValue(ctx, JWTDecodedTokenContextKey, token)
 			ctx = context.WithValue(ctx, JWTClaimsContextKey, token.Claims)
 
 			span.Finish()
