@@ -2,6 +2,7 @@ package opa
 
 import (
 	"context"
+	"os"
 
 	"github.com/12kmps/baas/authn/jwt"
 	"github.com/12kmps/baas/authzerrors"
@@ -83,7 +84,15 @@ type AuthorizationResponse struct {
 }
 
 func (a *Authorizor) NewSidecarMiddleware(queryString string) endpoint.Middleware {
-	c := opa.NewOPAClient(a.logger, a.tracer, "http://localhost:8181")
+	h := os.Getenv("OPA_HOST")
+	if len(h) == 0 {
+		h = "localhost"
+	}
+	p := os.Getenv("OPA_PORT")
+	if len(p) == 0 {
+		p = "8181"
+	}
+	c := opa.NewOPAClient(a.logger, a.tracer, "http://"+h+":"+p)
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			ctx, span := tracing.NewChildSpanAndContext(ctx, a.tracer, "AuthZPolicyExternal")

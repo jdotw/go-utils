@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptrace"
 	"strings"
 
 	"github.com/12kmps/baas/log"
@@ -41,6 +42,13 @@ type QueryRequest struct {
 
 func (c *opaClient) Query(ctx context.Context, query string, data interface{}, response interface{}) error {
 
+	clientTrace := &httptrace.ClientTrace{
+		GotConn: func(info httptrace.GotConnInfo) {
+			c.logger.Bg().Info("connection re-use", zap.Bool("reused", info.Reused))
+		},
+	}
+	traceCtx := httptrace.WithClientTrace(context.Background(), clientTrace)
+
 	jsonStr, err := json.Marshal(&QueryRequest{Input: &data})
 	if err != nil {
 		c.logger.For(ctx).Error("Failed to marshall request body", zap.Error(err))
@@ -48,9 +56,17 @@ func (c *opaClient) Query(ctx context.Context, query string, data interface{}, r
 	}
 
 	queryPath := strings.ReplaceAll(query, ".", "/")
-	r, err := http.Post(c.baseURL+"/v1/"+queryPath, "application/json", bytes.NewBuffer(jsonStr))
+
+	req, err := http.NewRequestWithContext(traceCtx, http.MethodPost, c.baseURL+"/v1/"+queryPath, bytes.NewBuffer(jsonStr))
 	if err != nil {
-		c.logger.For(ctx).Error("Failed to POST query", zap.Error(err))
+		c.logger.For(ctx).Error("Failed to create request", zap.Error(err))
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	r, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.logger.For(ctx).Error("Failed to perform request", zap.Error(err))
 		return err
 	}
 
