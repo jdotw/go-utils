@@ -12,6 +12,7 @@ import (
 // Response Encoder (Generic)
 
 func HTTPEncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	w.Header().Add("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(response)
 }
 
