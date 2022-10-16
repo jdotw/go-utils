@@ -8,7 +8,7 @@ import (
 
 	"crypto/subtle"
 
-	"github.com/12kmps/baas/log"
+	"github.com/jdotw/go-utils/log"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/opentracing/opentracing-go"

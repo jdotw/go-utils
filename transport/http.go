@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/12kmps/baas/authzerrors"
-	"github.com/12kmps/baas/recorderrors"
+	"github.com/jdotw/go-utils/authzerrors"
+	"github.com/jdotw/go-utils/recorderrors"
 )
 
 // Response Encoder (Generic)

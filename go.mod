@@ -1,4 +1,4 @@
-module github.com/12kmps/baas
+module github.com/jdotw/go-utils
 
 go 1.17
 

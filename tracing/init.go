@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/12kmps/baas/log"
+	"github.com/jdotw/go-utils/log"
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go/config"
 	"github.com/uber/jaeger-client-go/rpcmetrics"

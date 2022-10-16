@@ -9,7 +9,7 @@ import (
 	"net/http/httptrace"
 	"strings"
 
-	"github.com/12kmps/baas/log"
+	"github.com/jdotw/go-utils/log"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 )
