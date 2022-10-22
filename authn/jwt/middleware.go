@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
+	"github.com/MicahParks/keyfunc"
 )
 
 type contextKey string
@@ -117,7 +118,10 @@ func NewAuthenticator(logger log.Factory, tracer opentracing.Tracer) Authenticat
 // by the transport layers.
 // The signing string is read from the JWT_SIGNATURE env var
 func (a *Authenticator) NewMiddleware() endpoint.Middleware {
-	kf := func(token *jwt.Token) (interface{}, error) { return []byte(os.Getenv("JWT_SIGNATURE")), nil }
+	jwksURL := os.Getenv("JWKS_URL")
+	jwks, _ := keyfunc.Get(jwksURL, keyfunc.Options{}) // See recommended options in the examples directory.
+	kf := jwks.Keyfunc
+	// kf := func(token *jwt.Token) (interface{}, error) { return []byte(os.Getenv("JWT_SIGNATURE")), nil }
 	method := jwt.SigningMethodRS256
 	newClaims := StandardClaimsFactory
 	return newParser(kf, method, newClaims, *a)
