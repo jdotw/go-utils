@@ -113,7 +113,7 @@ func NewAuthenticator(logger log.Factory, tracer opentracing.Tracer) Authenticat
 // The signing string is read from the JWT_SIGNATURE env var
 func (a *Authenticator) NewMiddleware() endpoint.Middleware {
 	kf := func(token *jwt.Token) (interface{}, error) { return []byte(os.Getenv("JWT_SIGNATURE")), nil }
-	method := jwt.SigningMethodHS256
+	method := jwt.SigningMethodRS256
 	newClaims := StandardClaimsFactory
 	return newParser(kf, method, newClaims, *a)
 }
