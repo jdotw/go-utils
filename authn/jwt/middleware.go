@@ -87,8 +87,13 @@ func MapClaimsFactory() jwt.Claims {
 
 // StandardClaimsFactory is a ClaimsFactory that returns
 // an empty jwt.StandardClaims.
+
+type CustomClaim struct {
+	jwt.RegisteredClaims
+}
+
 func StandardClaimsFactory() jwt.Claims {
-	return &jwt.StandardClaims{}
+	return &CustomClaim{}
 }
 
 //
