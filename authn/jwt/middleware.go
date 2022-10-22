@@ -119,7 +119,14 @@ func NewAuthenticator(logger log.Factory, tracer opentracing.Tracer) Authenticat
 // The signing string is read from the JWT_SIGNATURE env var
 func (a *Authenticator) NewMiddleware() endpoint.Middleware {
 	jwksURL := os.Getenv("JWKS_URL")
-	jwks, _ := keyfunc.Get(jwksURL, keyfunc.Options{}) // See recommended options in the examples directory.
+	if jwksURL == "" {
+		a.logger.For(context.Background()).Fatal("JWKS_URL environment variable must be populated.")
+	}
+		
+	jwks, err := keyfunc.Get(jwksURL, keyfunc.Options{}) // See recommended options in the examples directory.
+	if err != nil {
+		a.logger.For(context.Background()).Fatal("Failed to get the JWKS from the given URL", zap.Error(err))
+	}
 	kf := jwks.Keyfunc
 	// kf := func(token *jwt.Token) (interface{}, error) { return []byte(os.Getenv("JWT_SIGNATURE")), nil }
 	method := jwt.SigningMethodRS256
